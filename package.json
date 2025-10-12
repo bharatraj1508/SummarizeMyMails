@@ -5,5 +5,9 @@
   "main": "index.js",
   "repository": "git@github.com:bharatraj1508/SummarizeMyMails.git",
   "author": "Bharat Raj Verma",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@google-cloud/local-auth": "2.1.0",
+    "googleapis": "105"
+  }
 }
