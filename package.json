@@ -1,0 +1,9 @@
+{
+  "name": "SummarizeMyMails",
+  "version": "1.0.0",
+  "description": "An app to summarize Gmail messages.",
+  "main": "index.js",
+  "repository": "git@github.com:bharatraj1508/SummarizeMyMails.git",
+  "author": "Bharat Raj Verma",
+  "license": "MIT"
+}
