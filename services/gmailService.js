@@ -1,38 +1,28 @@
-import path from "node:path";
-import process from "node:process";
-import { authenticate } from "@google-cloud/local-auth";
-import { google } from "googleapis";
-
-// The scope for reading Gmail labels.
-const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
-// The path to the credentials file.
-const CREDENTIALS_PATH = path.join(process.cwd(), "credentials.json");
+import authService from "./authService.js";
 
 class GmailService {
   constructor() {
-    this.auth = null;
     this.gmail = null;
   }
   
-  async authenticate() {
-    if (!this.auth) {
-      try {
-        this.auth = await authenticate({
-          scopes: SCOPES,
-          keyfilePath: CREDENTIALS_PATH,
-        });
-        this.gmail = google.gmail({ version: "v1", auth: this.auth });
-      } catch (error) {
-        console.error("Authentication failed:", error);
-        throw new Error(`Authentication failed: ${error.message}`);
+  async authenticate(user) {
+    try {
+      if (!user) {
+        throw new Error("User authentication required");
       }
+
+      // Get authenticated Gmail client for the user
+      this.gmail = await authService.getAuthenticatedGmailClient(user);
+      return this.gmail;
+    } catch (error) {
+      console.error("Gmail authentication failed:", error);
+      throw new Error(`Gmail authentication failed: ${error.message}`);
     }
-    return this.gmail;
   }
 
-  async listLabels() {
+  async listLabels(user) {
     try {
-      const gmail = await this.authenticate();
+      const gmail = await this.authenticate(user);
 
       // Get the list of labels.
       const result = await gmail.users.labels.list({
@@ -51,9 +41,9 @@ class GmailService {
     }
   }
 
-  async getLabel(labelId) {
+  async getLabel(user, labelId) {
     try {
-      const gmail = await this.authenticate();
+      const gmail = await this.authenticate(user);
 
       const result = await gmail.users.labels.get({
         userId: "me",
@@ -64,6 +54,55 @@ class GmailService {
     } catch (error) {
       console.error("Error getting label:", error);
       throw new Error(`Failed to get label: ${error.message}`);
+    }
+  }
+
+  // New method to get user's emails
+  async getEmails(user, query = "", maxResults = 10) {
+    try {
+      const gmail = await this.authenticate(user);
+
+      const result = await gmail.users.messages.list({
+        userId: "me",
+        q: query,
+        maxResults: maxResults,
+      });
+
+      const messages = result.data.messages || [];
+      
+      // Get full message details for each message
+      const emailPromises = messages.map(async (message) => {
+        const email = await gmail.users.messages.get({
+          userId: "me",
+          id: message.id,
+          format: "full",
+        });
+        return email.data;
+      });
+
+      const emails = await Promise.all(emailPromises);
+      return emails;
+    } catch (error) {
+      console.error("Error getting emails:", error);
+      throw new Error(`Failed to get emails: ${error.message}`);
+    }
+  }
+
+  // New method to get email by ID
+  async getEmailById(user, emailId) {
+    try {
+      const gmail = await this.authenticate(user);
+
+      const result = await gmail.users.messages.get({
+        userId: "me",
+        id: emailId,
+        format: "full",
+      });
+
+      return result.data;
+    } catch (error) {
+      console.error("Error getting email by ID:", error);
+      throw new Error(`Failed to get email: ${error.message}`);
     }
   }
 }
